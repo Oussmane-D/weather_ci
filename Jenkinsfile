@@ -1,64 +1,64 @@
 pipeline {
-  agent any
+    agent any                     // Jenkins contrôleur ou agent qui a Docker
 
-  environment {
-    REGISTRY = 'docker.io'
-    IMAGE    = 'ouss/weather-airflow'
-    TAG      = "${env.BUILD_NUMBER}"
-  }
-
-  stages {
-
-    stage('Checkout') {
-      steps { checkout scm }
+    environment {
+        IMAGE_TAG = "weather-ci:${env.BUILD_NUMBER}"
     }
 
-    stage('Lint & Tests') {
-      agent { docker { image 'python:3.10' } }
-      steps {
-        sh '''
-          pip install --no-cache-dir -r requirements-dev.txt
-          flake8 dags tests
-          pytest -q
-        '''
-      }
-    }
+    stages {
 
-    stage('Build image') {
-      steps {
-        sh 'docker build -t $REGISTRY/$IMAGE:$TAG .'
-      }
-    }
-
-    stage('Push image') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'docker-hub',
-                                          usernameVariable: 'DOCKER_USER',
-                                          passwordVariable: 'DOCKER_PASS')]) {
-          sh '''
-            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin $REGISTRY
-            docker push $REGISTRY/$IMAGE:$TAG
-          '''
+        stage('Checkout') {
+            steps { checkout scm }
         }
-      }
-    }
 
-    stage('Deploy (Docker Compose)') {
-      when { branch 'main' }
-      steps {
-        sshagent(credentials: ['ssh-prod']) {
-          sh '''
-            ssh prod "docker pull $REGISTRY/$IMAGE:$TAG &&
-                      docker compose -f ~/airflow_weather/docker-compose.yaml \
-                         up -d --force-recreate webserver scheduler"
-          '''
+        stage('Lint & Tests') {
+            agent { docker { image 'python:3.10' reuseNode true } }
+            steps {
+                sh '''
+                  pip install -r requirements-dev.txt
+                  pytest --junitxml=test-results/unit.xml
+                '''
+            }
+            post {
+                always {
+                    junit 'test-results/**/*.xml'            // ← chemin réel
+                }
+            }
         }
-      }
-    }
-  }
 
-  post {
-    always  { junit 'tests/**/pytest.xml' }
-    failure { mail to: 'ops@example.com', subject: "🟥 Build ${env.BUILD_TAG} KO", body: "Voir Jenkins..." }
-  }
+        stage('Build image') {
+            steps {
+                sh "docker build -t $IMAGE_TAG ."
+            }
+        }
+
+        stage('Push image') {
+            when { branch 'main' }
+            steps {
+                withCredentials([string(credentialsId: 'dockerhub-token',
+                                         variable: 'DOCKER_TOKEN')]) {
+                    sh '''
+                      echo "$DOCKER_TOKEN" | docker login -u youruser --password-stdin
+                      docker tag $IMAGE_TAG youruser/weather-ci:$IMAGE_TAG
+                      docker push youruser/weather-ci:$IMAGE_TAG
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy (Docker Compose)') {
+            when { branch 'main' }
+            steps {
+                sh 'docker compose down --remove-orphans'
+                sh 'docker compose pull && docker compose up -d'
+            }
+        }
+    }
+
+    post {
+        failure {
+            // retirer ou configurer correctement le mailer
+            // mail to: 'ops@example.com', subject: "Build failed", body: "..."
+        }
+    }
 }
