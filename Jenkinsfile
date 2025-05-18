@@ -31,8 +31,8 @@ pipeline {
       steps {
         sh '''
           # Dépendances de dev + provider Airbyte
-          pip install --no-cache-dir -r requirements-dev.txt \
-                       apache-airflow-providers-airbyte==2.7.0
+          pip install --no-cache-dir -r requirements-dev.txt apache-airflow-providers-airbyte==5.1.0
+
 
           # Lint : on loggue mais on ne bloque pas la build
           flake8 dags tests || true
