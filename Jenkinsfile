@@ -1,64 +1,71 @@
 pipeline {
-    agent any                     // Jenkins contrôleur ou agent qui a Docker
-
-    environment {
-        IMAGE_TAG = "weather-ci:${env.BUILD_NUMBER}"
+    /* ---------- AGENT ---------- */
+    agent {
+        docker {
+            /* image officielle Python avec pip et pytest */
+            image 'python:3.10-slim'
+            /* on garde le même workspace */
+            reuseNode true
+            /* facultatif : exécuter en root pour installer libs */
+            args '-u root:root'
+        }
     }
 
+    /* ---------- ENV / OPTIONS ---------- */
+    environment {
+        // exemple : répertoire virtuel où PyTest génère le rapport JUnit XML
+        TEST_REPORTS = 'tests/reports/junit.xml'
+    }
+    options {
+        // garde les 10 derniers builds
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    /* ---------- STAGES ---------- */
     stages {
 
-        stage('Checkout') {
-            steps { checkout scm }
+        stage('Install deps') {
+            steps {
+                sh 'pip install -r requirements-dev.txt'
+            }
         }
 
-        stage('Lint & Tests') {
-            agent { docker { image 'python:3.10' reuseNode true } }
+        stage('Lint') {
             steps {
-                sh '''
-                  pip install -r requirements-dev.txt
-                  pytest --junitxml=test-results/unit.xml
-                '''
+                sh 'pip install flake8 && flake8 dags tests'
             }
-            post {
-                always {
-                    junit 'test-results/**/*.xml'            // ← chemin réel
-                }
+        }
+
+        stage('Unit tests') {
+            steps {
+                // PyTest génère un rapport XML compréhensible par JUnit
+                sh 'pytest -q -s --junitxml=${TEST_REPORTS}'
             }
         }
 
         stage('Build image') {
             steps {
-                sh "docker build -t $IMAGE_TAG ."
+                sh 'docker build -t weather_pipeline:$(git rev-parse --short HEAD) .'
             }
         }
 
-        stage('Push image') {
-            when { branch 'main' }
-            steps {
-                withCredentials([string(credentialsId: 'dockerhub-token',
-                                         variable: 'DOCKER_TOKEN')]) {
-                    sh '''
-                      echo "$DOCKER_TOKEN" | docker login -u youruser --password-stdin
-                      docker tag $IMAGE_TAG youruser/weather-ci:$IMAGE_TAG
-                      docker push youruser/weather-ci:$IMAGE_TAG
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy (Docker Compose)') {
-            when { branch 'main' }
-            steps {
-                sh 'docker compose down --remove-orphans'
-                sh 'docker compose pull && docker compose up -d'
-            }
-        }
+        /* ajoutez ici vos étapes Push/Deploy si besoin */
     }
 
+    /* ---------- POST ACTIONS ---------- */
     post {
+        always {
+            junit "${TEST_REPORTS}"                // récup. des résultats de tests
+            archiveArtifacts artifacts: '**/*.log' // exemple
+        }
+        success {
+            echo "✅ Build ${env.BUILD_NUMBER} OK"
+        }
         failure {
-            // retirer ou configurer correctement le mailer
-            // mail to: 'ops@example.com', subject: "Build failed", body: "..."
+            // envoyez un mail ou un Slack message (exemple avec mail)
+            mail to: 'you@example.com',
+                 subject: "❌ Job ${env.JOB_NAME} #${env.BUILD_NUMBER} FAILED",
+                 body: "Voir les logs : ${env.BUILD_URL}"
         }
     }
 }
