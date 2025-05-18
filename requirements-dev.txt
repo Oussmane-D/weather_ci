@@ -3,4 +3,4 @@ flake8
 jinja2
 apache-airflow==2.9.1
 apache-airflow-providers-airbyte
-apache-airflow-providers-snowflake
+apache-airflow-providers-snowflake==5.1.0

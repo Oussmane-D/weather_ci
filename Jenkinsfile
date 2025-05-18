@@ -33,7 +33,7 @@ pipeline {
           # Dépendances de dev + provider Airbyte
           pip install --no-cache-dir -r requirements-dev.txt \
                apache-airflow-providers-airbyte \
-               apache-airflow-providers-snowflake
+               apache-airflow-providers-snowflake==5.1.0
 
 
           # Lint : on loggue mais on ne bloque pas la build
