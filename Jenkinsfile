@@ -31,7 +31,9 @@ pipeline {
       steps {
         sh '''
           # Dépendances de dev + provider Airbyte
-          pip install --no-cache-dir -r requirements-dev.txt apache-airflow-providers-airbyte
+          pip install --no-cache-dir -r requirements-dev.txt \
+               apache-airflow-providers-airbyte \
+               apache-airflow-providers-snowflake
 
 
           # Lint : on loggue mais on ne bloque pas la build
