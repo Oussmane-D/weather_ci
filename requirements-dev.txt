@@ -2,4 +2,4 @@ pytest
 flake8
 jinja2
 apache-airflow==2.9.1
-apache-airflow-providers-airbyte==5.1.0
+apache-airflow-providers-airbyte
