@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+
+  # 👉 service de migration / création d’utilisateur : UNE SEULE FOIS
+  airflow-init:
+    image: apache/airflow:2.9.1-python3.10
+    env_file: .env
+    depends_on: [postgres]
+    environment:
+      - AIRFLOW__WEBSERVER__SECRET_KEY=qY0hJ2UwMUtYgjE2v8Q-Vg== 
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      
+    volumes:
+      - ./dags:/opt/airflow/dags
+    command: ["bash", "-c",
+          "airflow db init && \
+           airflow users create --username airflow --password airflow \
+           --firstname Ouss --lastname Admin --role Admin --email admin@example.com"]
+
+      
+
+  webserver:
+    image: apache/airflow:2.9.1-python3.10
+    depends_on: [postgres]
+    env_file: .env
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW_CONN_SNOWFLAKE_CONN=snowflake://$SNOWFLAKE_USER:$SNOWFLAKE_PASSWORD@$SNOWFLAKE_ACCOUNT/$SNOWFLAKE_DATABASE?warehouse=$SNOWFLAKE_WAREHOUSE&role=$SNOWFLAKE_ROLE
+      - AIRFLOW_CONN_AIRBYTE_CLOUD=airbyte://api.airbyte.com:443
+      - AIRFLOW_VAR_AIRBYTE_CONNECTION_ID=$AIRBYTE_CONNECTION_ID
+      - AIRFLOW_VAR_AIRBYTE_PAT=$AIRBYTE_PAT
+      - AIRFLOW__WEBSERVER__SECRET_KEY=qY0hJ2UwMUtYgjE2v8Q-Vg== 
+    
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./sql:/opt/airflow/sql
+    ports:
+      - "8081:8080"
+    command: ["airflow", "webserver"]      # ← sous‑commande explicite
+
+  scheduler:
+    image: apache/airflow:2.9.1-python3.10
+    depends_on: [webserver]
+    env_file: .env
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__WEBSERVER__SECRET_KEY=qY0hJ2UwMUtYgjE2v8Q-Vg== 
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./sql:/opt/airflow/sql
+    command: ["airflow", "scheduler"]      # ←
