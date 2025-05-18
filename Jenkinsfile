@@ -14,14 +14,20 @@ pipeline {
     }
 
     stage('Lint & Tests') {
-      /* image plus léger + lint non-bloquant + rapport JUnit */
-      agent { docker { image 'python:3.10-slim' } }
+      agent {
+        docker {
+          image 'python:3.10-slim'
+          /* on exécute le conteneur en root pour que pip puisse écrire */
+          args  '-u root:root'
+          /* garde le même workspace : évite le warning "workspace@2" */
+          reuseNode true
+        }
+      }
       steps {
         sh '''
           pip install --no-cache-dir -r requirements-dev.txt
-          # Lint : on log les erreurs mais on ne coupe pas le pipeline
+          # On affiche les erreurs de lint sans bloquer le build
           flake8 dags tests || true
-          # Tests unitaires + rapport JUnit pour Jenkins
           pytest -q --junitxml=tests/pytest.xml
         '''
       }
