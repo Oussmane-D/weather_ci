@@ -1,40 +1,64 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.10-slim'
-            args  '-u 0:0'          // optionnel : évite des soucis de droits
-            reuseNode true
-        }
+  agent any
+
+  environment {
+    REGISTRY = 'docker.io'
+    IMAGE    = 'ouss/weather-airflow'
+    TAG      = "${env.BUILD_NUMBER}"
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps { checkout scm }
     }
 
-    environment {
-        TEST_REPORTS = 'tests/reports/*.xml'
-        // éventuellement d’autres variables (AIRFLOW_, etc.)
+    stage('Lint & Tests') {
+      agent { docker { image 'python:3.10' } }
+      steps {
+        sh '''
+          pip install --no-cache-dir -r requirements-dev.txt
+          flake8 dags tests
+          pytest -q
+        '''
+      }
     }
 
-    stages {
-        stage('Install deps') {
-            steps {
-                sh 'pip install -r requirements-dev.txt'
-            }
-        }
-
-        stage('Tests') {
-            steps {
-                sh 'pytest -q -s --junitxml=${TEST_REPORTS}'
-            }
-        }
+    stage('Build image') {
+      steps {
+        sh 'docker build -t $REGISTRY/$IMAGE:$TAG .'
+      }
     }
 
-    post {
-        always {
-            junit allowEmptyResults: true, testResults: "${env.TEST_REPORTS}"
+    stage('Push image') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'docker-hub',
+                                          usernameVariable: 'DOCKER_USER',
+                                          passwordVariable: 'DOCKER_PASS')]) {
+          sh '''
+            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin $REGISTRY
+            docker push $REGISTRY/$IMAGE:$TAG
+          '''
         }
-        failure {
-            echo "❌ Build ${currentBuild.displayName} KO"
-        }
-        success {
-            echo "✅ Build ${currentBuild.displayName} OK"
-        }
+      }
     }
+
+    stage('Deploy (Docker Compose)') {
+      when { branch 'main' }
+      steps {
+        sshagent(credentials: ['ssh-prod']) {
+          sh '''
+            ssh prod "docker pull $REGISTRY/$IMAGE:$TAG &&
+                      docker compose -f ~/airflow_weather/docker-compose.yaml \
+                         up -d --force-recreate webserver scheduler"
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    always  { junit 'tests/**/pytest.xml' }
+    failure { mail to: 'jenkins-ouss@ouss-d.com', subject: "🟥 Build ${env.BUILD_TAG} KO", body: "Voir Jenkins..." }
+  }
 }
