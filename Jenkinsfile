@@ -1,9 +1,11 @@
 pipeline {
-  agent any
+  /*------------------------------------------
+   | 1) On cible un noeud qui a Docker installé
+   |   (ou monte le socket comme ci-dessus) */
+  agent { label 'docker' }
 
   environment {
-    CI_IMAGE = 'oussmaned/airflow-ci:2.9.1'
-    IMAGE_TAG = "oussmaned/weather-ci:${env.BUILD_NUMBER}"
+    AIRFLOW_CI_IMAGE = 'oussmaned/airflow-ci:2.9.1'
   }
 
   stages {
@@ -16,8 +18,8 @@ pipeline {
     stage('Lint & Tests') {
       steps {
         script {
-          // lance les checks dans le conteneur CI_IMAGE
-          docker.image(CI_IMAGE).inside {
+          // 2) On utilise l’image qui contient déjà flake8/pytest
+          docker.image(env.AIRFLOW_CI_IMAGE).inside {
             sh 'flake8 dags tests'
             sh 'pytest -q --junitxml=tests/pytest.xml'
           }
@@ -33,7 +35,7 @@ pipeline {
     stage('Build Docker Image') {
       steps {
         script {
-          docker.build(IMAGE_TAG)
+          docker.build("oussmaned/airflow-ci:${env.AIRFLOW_CI_IMAGE_TAG}", '-f Dockerfile .')
         }
       }
     }
@@ -41,8 +43,8 @@ pipeline {
     stage('Push Image') {
       steps {
         script {
-          docker.withRegistry('https://index.docker.io/v1/', 'docker-creds') {
-            docker.image(IMAGE_TAG).push()
+          docker.withRegistry('', 'dockerhub-credentials') {
+            docker.image("oussmaned/airflow-ci:${env.AIRFLOW_CI_IMAGE_TAG}").push()
           }
         }
       }
@@ -50,23 +52,14 @@ pipeline {
 
     stage('Deploy') {
       steps {
-        // exécution d’un docker-compose sur la prod
-        sh 'ssh deploy@server "cd /srv/weather && docker-compose pull && docker-compose up -d"'
+        sh 'docker-compose up -d'
       }
     }
   }
 
   post {
-    always { cleanWs() }
-    success {
-      mail to: 'team@exemple.com',
-           subject: "Build #${env.BUILD_NUMBER} réussi",
-           body: "Bravo ! 🚀"
-    }
-    failure {
-      mail to: 'team@exemple.com',
-           subject: "Build #${env.BUILD_NUMBER} échoué",
-           body: "Oups… 😢"
+    cleanup {
+      cleanWs()
     }
   }
 }
