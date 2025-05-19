@@ -1,11 +1,14 @@
-FROM apache/airflow:2.9.1-python3.10
+FROM python:3.10-slim
 
-USER root
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+# 1) Installer system deps si besoin
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc libpq-dev && rm -rf /var/lib/apt/lists/*
 
-# ajoute tes DAGs dans l’image (facultatif ; sinon volume mount)
-COPY dags/ /opt/airflow/dags
-COPY sql/  /opt/airflow/sql
+# 2) Copier et installer requirements-dev
+COPY requirements-dev.txt /tmp/
+RUN pip install --no-cache-dir -r /tmp/requirements-dev.txt
 
+# 3) Créer user airflow
+RUN useradd -m -d /home/airflow airflow
 USER airflow
+WORKDIR /home/airflow
