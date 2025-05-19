@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # 1. Base de données pour Airflow
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB:   airflow
+    volumes:
+      - postgres_db:/var/lib/postgresql/data
+
+  # 2. Webserver + Scheduler (LocalExecutor)
+  airflow:
+    image: oussmaned/airflow-ci:${IMAGE_TAG:-latest}
+    depends_on:
+      - postgres
+    environment:
+      # Connexion à la BDD Postgres
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      # Mode d’exécution (local, un seul conteneur)
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      # Ne pas charger les exemples
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      # Clé Fernet (à générer une fois et fixer en production)
+      AIRFLOW__CORE__FERNET_KEY: 'VOTRE_FERNET_KEY_ICI'
+      # Dossier de logs
+      AIRFLOW__CORE__BASE_LOG_FOLDER: /opt/airflow/logs
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    command: >
+      bash -c "
+        airflow db upgrade &&
+        airflow users create \
+          --username admin --firstname Admin --lastname User \
+          --role Admin --email admin@example.com --password admin &&
+        exec airflow webserver
+      "
+
+volumes:
+  postgres_db:
