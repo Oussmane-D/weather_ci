@@ -1,14 +1,14 @@
 FROM python:3.10-slim
 
-# 1) Installer system deps si besoin
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc libpq-dev && rm -rf /var/lib/apt/lists/*
+# 1) Définir un répertoire de travail
+WORKDIR /app
 
-# 2) Copier et installer requirements-dev
-COPY requirements-dev.txt /tmp/
-RUN pip install --no-cache-dir -r /tmp/requirements-dev.txt
+# 2) Copier et installer les dépendances
+COPY requirements-dev.txt /app/requirements-dev.txt
+RUN pip install --no-cache-dir -r requirements-dev.txt
 
-# 3) Créer user airflow
-RUN useradd -m -d /home/airflow airflow
-USER airflow
-WORKDIR /home/airflow
+# 3) Copier le reste de votre code
+COPY . /app
+
+# 4) Commande par défaut (à adapter)
+CMD ["bash"]
