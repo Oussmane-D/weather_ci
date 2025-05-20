@@ -5,8 +5,8 @@ pytest
 flake8
 jinja2
 apache-airflow
-apache-airflow-providers-snowflake
-apache-airflow-providers-airbyte
+#apache-airflow-providers-snowflake
+#apache-airflow-providers-airbyte
 snowflake-connector-python
 aiohttp
 flask_appbuilder

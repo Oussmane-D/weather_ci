@@ -42,8 +42,7 @@ pipeline {
             -r requirements-dev.txt \
             aiohttp \
             flask_appbuilder \
-            apache-airflow-providers-airbyte \
-            apache-airflow-providers-snowflake
+            
            
           flake8 dags tests || true
           pytest -q --junitxml=tests/pytest.xml
