@@ -11,3 +11,4 @@ aiohttp
 flask_appbuilder
 apache-airflow-providers-airbyte
 apache-airflow-providers-snowflake
+apache-airflow-providers-common-sql

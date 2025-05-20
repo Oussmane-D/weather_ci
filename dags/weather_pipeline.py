@@ -2,11 +2,8 @@
 from datetime import datetime
 from airflow import DAG
 from airflow.providers.airbyte.operators.airbyte import AirbyteTriggerSyncOperator
-from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
-# ──────────────────────────────────────────────────────────────
-# 1. Paramètres généraux
-# ──────────────────────────────────────────────────────────────
 DEFAULT_ARGS = {
     "owner": "ouss",
     "retries": 1,
@@ -15,42 +12,31 @@ DEFAULT_ARGS = {
 with DAG(
     dag_id="weather_pipeline",
     start_date=datetime(2025, 1, 1),
-    schedule_interval="0 * * * *",     # ⇒ toutes les heures pile
+    schedule_interval="0 * * * *",
     catchup=False,
     template_searchpath="/opt/airflow/sql",
     default_args=DEFAULT_ARGS,
     tags=["portfolio", "weather"],
 ) as dag:
-    # ──────────────────────────────────────────────────────────
-    # 2. Tâche : déclenchement Airbyte Cloud
-    # ──────────────────────────────────────────────────────────
+
     airbyte_sync = AirbyteTriggerSyncOperator(
         task_id="airbyte_sync",
-        airbyte_conn_id="airbyte_cloud",              # ← Connexion définie dans Airflow
+        airbyte_conn_id="airbyte_cloud",
         connection_id="4443efaa-f1b0-4ae6-99d8-965471e0cdba",
-        asynchronous=False,                           # on attend la fin de la sync
+        asynchronous=False,
         timeout=3600,
     )
 
-    # ──────────────────────────────────────────────────────────
-    # 3. Tâche : rafraîchissement SILVER
-    # ──────────────────────────────────────────────────────────
-    refresh_silver = SnowflakeOperator(
+    refresh_silver = SQLExecuteQueryOperator(
         task_id="refresh_silver",
-        snowflake_conn_id="snowflake_conn",           # ← Connexion Snowflake
-        sql="refresh_silver.sql",                 # chemin relatif dans le conteneur
+        conn_id="snowflake_conn",
+        sql="refresh_silver.sql",
     )
 
-    # ──────────────────────────────────────────────────────────
-    # 4. Tâche : reconstruction GOLD
-    # ──────────────────────────────────────────────────────────
-    refresh_gold = SnowflakeOperator(
+    refresh_gold = SQLExecuteQueryOperator(
         task_id="refresh_gold",
-        snowflake_conn_id="snowflake_conn",
+        conn_id="snowflake_conn",
         sql="refresh_gold.sql",
     )
 
-    # ──────────────────────────────────────────────────────────
-    # 5. Dépendances
-    # ──────────────────────────────────────────────────────────
     airbyte_sync >> refresh_silver >> refresh_gold
