@@ -35,6 +35,7 @@ pipeline {
       }
       steps {
         sh 'pip install --upgrade pip setuptools'
+
       
         sh '''
         
@@ -42,7 +43,8 @@ pipeline {
             -r requirements-dev.txt \
             aiohttp \
             flask_appbuilder \
-            
+            apache-airflow-providers-airbyte \
+            apache-airflow-providers-snowflake
            
           flake8 dags tests || true
           pytest -q --junitxml=tests/pytest.xml
