@@ -1,4 +1,4 @@
-airflow 2.0.2
+apache-airflow==2.9.1
 apache-airflow-providers-snowflake
 apache-airflow-providers-airbyte
-snowflake-connector-python==2.4.3.
+snowflake-connector-python==2.4.3

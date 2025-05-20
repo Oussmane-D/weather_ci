@@ -3,9 +3,9 @@ pytest
 pyarrow<19.0.0         # pour éviter l’incompatibilité
 flake8
 jinja2
-airflow 2.0.2
-apache-airflow-providers-snowflake
-apache-airflow-providers-airbyte
-snowflake-connector-python==2.4.3.
+apache-airflow==2.9.1
 aiohttp
 flask_appbuilder
+apache-airflow-providers-snowflake
+apache-airflow-providers-airbyte
+snowflake-connector-python==2.4.3
