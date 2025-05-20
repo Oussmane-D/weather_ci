@@ -27,7 +27,7 @@ pipeline {
       agent {
         docker {
           image 'python:3.10-slim'
-          args  '-v $PWD:/usr/src/app -w /usr/src/app'
+          args  '-u root:root -v $PWD:/usr/src/app -w /usr/src/app'
         }
       }
       steps {
