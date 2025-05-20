@@ -12,7 +12,7 @@ DEFAULT_ARGS = {
 with DAG(
     dag_id="weather_pipeline",
     start_date=datetime(2025, 1, 1),
-    schedule_interval="0 * * * *",
+    schedule="0 * * * *",
     catchup=False,
     template_searchpath="/opt/airflow/sql",
     default_args=DEFAULT_ARGS,
