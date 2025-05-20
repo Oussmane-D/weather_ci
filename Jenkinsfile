@@ -26,7 +26,7 @@ pipeline {
     // | 2) Lint & Tests sous Python (on force root pour pip)          |
     // +----------------------------------------------------------------+
     stage('Lint & Tests') {
-      agent { docker { image 'python:3.10-slim' args '-v $PWD:/usr/src/app -w /usr/src/app' } }
+      agent { 'docker' { image 'python:3.10-slim' args '-v $PWD:/usr/src/app -w /usr/src/app' } }
       
       steps {
      
