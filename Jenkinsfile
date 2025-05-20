@@ -37,6 +37,8 @@ pipeline {
         sh '''
           pip install --upgrade pip setuptools
           pip install --no-cache-dir -r requirements-dev.txt \
+          pip install --no-cache-dir \
+            aiohttp flask_appbuilder \
             apache-airflow-providers-airbyte apache-airflow-providers-snowflake
           flake8 dags tests || true
           pytest -q --junitxml=tests/pytest.xml
