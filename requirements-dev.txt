@@ -1,6 +1,5 @@
 
 pytest
-flake8
 pyarrow<19.0.0         # pour éviter l’incompatibilité
 pytest
 flake8
@@ -9,3 +8,5 @@ apache-airflow
 apache-airflow-providers-snowflake
 apache-airflow-providers-airbyte
 snowflake-connector-python
+aiohttp
+flask_appbuilder
