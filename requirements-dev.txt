@@ -1,4 +1,8 @@
-apache-airflow==2.0.2
+# versions compatibles numpy/pandas
+numpy==1.24.4
+pandas==2.1.4
+
+# puis le reste
 pytest
 flake8
 pyarrow<19.0.0
