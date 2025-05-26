@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     REGISTRY    = 'docker.io'
-    REPOSITORY  = 'oussmaned/airflow-ci'
+    REPOSITORY  = 'ousmane2024/airflow-ci'
     IMAGE_TAG   = "${env.BUILD_NUMBER}"
   }
 

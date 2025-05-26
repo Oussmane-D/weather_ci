@@ -13,7 +13,7 @@ services:
 
   # 2. Webserver + Scheduler (LocalExecutor)
   airflow:
-    image: oussmaned/airflow-ci:${IMAGE_TAG:-latest}
+    image: ousmane2024/airflow-ci:${IMAGE_TAG:-latest}
     depends_on:
       - postgres
     environment:
